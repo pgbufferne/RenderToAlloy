@@ -1,0 +1,34 @@
+logging {
+  level  = "info"
+  format = "logfmt"
+}
+
+// Scrape l'exporter Python (même conteneur, donc localhost)
+prometheus.scrape "render_exporter" {
+  targets = [
+    {"__address__" = "localhost:9200"},
+  ]
+  scrape_interval = "60s"
+  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+}
+
+// (Optionnel mais utile) Auto-monitoring d'Alloy lui-même
+prometheus.exporter.self "alloy" {}
+
+prometheus.scrape "alloy_self" {
+  targets         = prometheus.exporter.self.alloy.targets
+  scrape_interval = "60s"
+  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+}
+
+// Envoi vers Grafana Cloud (remote_write)
+prometheus.remote_write "grafana_cloud" {
+  endpoint {
+    url = env("GRAFANA_CLOUD_PROMETHEUS_URL")
+
+    basic_auth {
+      username = env("GRAFANA_CLOUD_PROMETHEUS_USER")
+      password = env("GRAFANA_CLOUD_API_KEY")
+    }
+  }
+}
