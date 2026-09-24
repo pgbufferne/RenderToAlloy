@@ -9,7 +9,23 @@ prometheus.scrape "render_exporter" {
     {"__address__" = "localhost:9200"},
   ]
   scrape_interval = "60s"
-  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+  forward_to      = [prometheus.remote_write.metrics_hosted_prometheus.receiver]
+}
+
+// Scrape les métriques applicatives de rok-kvk-dashboard (endpoint /metrics.php)
+prometheus.scrape "rok_app" {
+  targets = [
+    {
+      "__address__"       = "rok-kvk-dashboard.onrender.com/",
+      "__scheme__"         = "https",
+      "__metrics_path__"   = "/metrics.php",
+    },
+  ]
+  params = {
+    api_key = [env("ROK_APP_METRICS_TOKEN")],
+  }
+  scrape_interval = "60s"
+  forward_to      = [prometheus.remote_write.metrics_hosted_prometheus.receiver]
 }
 
 // (Optionnel mais utile) Auto-monitoring d'Alloy lui-même
@@ -18,13 +34,14 @@ prometheus.exporter.self "alloy" {}
 prometheus.scrape "alloy_self" {
   targets         = prometheus.exporter.self.alloy.targets
   scrape_interval = "60s"
-  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+  forward_to      = [prometheus.remote_write.metrics_hosted_prometheus.receiver]
 }
 
 // Envoi vers Grafana Cloud (remote_write)
-prometheus.remote_write "grafana_cloud" {
+prometheus.remote_write "metrics_hosted_prometheus" {
   endpoint {
-    url = env("GRAFANA_CLOUD_PROMETHEUS_URL")
+    name = "hosted-prometheus"
+    url  = "https://prometheus-prod-65-prod-eu-west-2.grafana.net/api/prom/push"
 
     basic_auth {
       username = env("GRAFANA_CLOUD_PROMETHEUS_USER")
