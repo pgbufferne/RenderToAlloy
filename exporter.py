@@ -13,6 +13,7 @@ import logging
 import os
 import threading
 import time
+from datetime import datetime, timedelta, timezone
 
 import requests
 from prometheus_client import Gauge, start_http_server
@@ -45,8 +46,21 @@ HEADERS = {
 
 
 def fetch_metric(metric_name: str, resource_id: str):
+    now = datetime.now(timezone.utc)
+    # Fenêtre volontairement étroite (2x l'intervalle de poll) : ne remonter
+    # que l'instance de conteneur RÉELLEMENT active maintenant. Sans ça,
+    # l'API Render renvoie par défaut une fenêtre large contenant une série
+    # par instance ayant existé sur les dernières heures (redeploys,
+    # spin-down/wake...), et on les réémettrait indéfiniment à chaque poll.
+    start_time = now - timedelta(seconds=POLL_INTERVAL * 2)
+
     url = f"https://api.render.com/v1/metrics/{metric_name}"
-    params = {"resource": resource_id, "resolutionSeconds": 60}
+    params = {
+        "resource": resource_id,
+        "resolutionSeconds": 60,
+        "startTime": start_time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "endTime": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
     resp = requests.get(url, headers=HEADERS, params=params, timeout=10)
     resp.raise_for_status()
     return resp.json()
