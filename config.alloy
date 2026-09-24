@@ -8,6 +8,7 @@ prometheus.scrape "render_exporter" {
   targets = [
     {"__address__" = "localhost:9200"},
   ]
+  honor_labels    = true
   scrape_interval = "60s"
   forward_to      = [prometheus.remote_write.metrics_hosted_prometheus.receiver]
 }
