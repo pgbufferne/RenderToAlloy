@@ -17,7 +17,7 @@ prometheus.scrape "render_exporter" {
 prometheus.scrape "rok_app" {
   targets = [
     {
-      "__address__"       = "rok-kvk-dashboard.onrender.com/",
+      "__address__"       = "rok-kvk-dashboard.onrender.com",
       "__scheme__"         = "https",
       "__metrics_path__"   = "/metrics.php",
     },
